@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CYBER PITCH TRAINER PRO MAX</title>
+
+    <!-- Tailwind CSS & FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tone.js MIDI & Pitchy Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pitchy@4.1.0/dist/pitchy.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyberBg: '#0a0d18',
+                        cyberCard: '#111625',
+                        cyberBorder: '#1c263b',
+                        neonCyan: '#00f0ff',
+                        neonMagenta: '#ff007f',
+                        neonYellow: '#ffe600',
+                        neonGreen: '#00ff66',
+                        neonRed: '#ff2a6d',
+                        neonPurple: '#a855f7'
+                    },
+                    fontFamily: {
+                        mono: ['Consolas', 'Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        html, body {
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden !important;
+            margin: 0; padding: 0;
+            background-color: #0a0d18;
+            color: #f1f5f9;
+            font-family: 'Inter', system-ui, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-image: 
+                radial-gradient(circle at 10% 15%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 85%, rgba(255, 0, 127, 0.05) 0%, transparent 40%);
+        }
+
+        .glow-cyan { box-shadow: 0 0 12px rgba(0, 240, 255, 0.3); }
+        .glow-magenta { box-shadow: 0 0 12px rgba(255, 0, 127, 0.3); }
+        .text-glow-cyan { text-shadow: 0 0 8px rgba(0, 240, 255, 0.7); }
+        .text-glow-magenta { text-shadow: 0 0 8px rgba(255, 0, 127, 0.7); }
+        .text-glow-yellow { text-shadow: 0 0 8px rgba(255, 230, 0, 0.7); }
+        .text-glow-green { text-shadow: 0 0 8px rgba(0, 255, 102, 0.7); }
+
+        .cyber-tile {
+            clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0a0d18; }
+        ::-webkit-scrollbar-thumb { background: #00f0ff; border-radius: 2px; }
+    </style>
+</head>
+
+<body class="h-screen max-h-screen flex flex-col p-2 sm:p-3 gap-2 overflow-hidden bg-cyberBg text-slate-100 select-none">
+
+    <!-- Warning Banner -->
+    <div id="fileProtocolWarning" class="hidden flex-none bg-amber-500/20 border border-amber-500/50 text-amber-200 text-[11px] font-mono px-3 py-1 rounded flex justify-between items-center">
+        <span><i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Local File protocol (`file://`) detected. Microphones & API work best when run on a local HTTP server.</span>
+        <button onclick="document.getElementById('fileProtocolWarning').remove()" class="text-amber-300 hover:text-white ml-2"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- 1. Header Bar -->
+    <header class="flex-none h-11 bg-cyberCard border border-cyberBorder rounded-lg px-3 flex items-center justify-between gap-2 shadow-md">
+        <div class="flex items-center space-x-2.5">
+            <div class="w-7 h-7 rounded bg-gradient-to-tr from-cyan-500 to-pink-500 flex items-center justify-center text-slate-950 font-bold text-xs shadow-sm">
+                <i class="fa-solid fa-wave-square"></i>
+            </div>
+            <div>
+                <h1 class="text-sm sm:text-base font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-neonCyan via-neonMagenta to-neonYellow leading-none">
+                    CYBER PITCH TRAINER <span class="text-[9px] px-1.5 py-0.2 rounded bg-neonCyan/20 text-neonCyan border border-neonCyan/50 font-mono">PRO MAX</span>
+                </h1>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-1.5">
+                <span class="text-[9px] text-slate-400 font-mono hidden sm:inline">INPUT</span>
+                <div class="w-20 sm:w-32 h-2.5 bg-slate-950 border border-slate-800 rounded-full overflow-hidden p-0.5 flex items-center">
+                    <div id="vuMeterBar" class="h-full bg-gradient-to-r from-neonGreen via-neonYellow to-neonRed rounded-full transition-all duration-75" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <button id="micStatusBtn" onclick="toggleMicrophone()" class="flex items-center space-x-1.5 px-2.5 py-1 rounded border border-slate-700 bg-slate-900 hover:border-neonCyan transition cursor-pointer">
+                <span id="micDot" class="w-2 h-2 rounded-full bg-red-500"></span>
+                <span id="micText" class="text-[10px] font-mono text-slate-300">MIC: OFF</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 2. Controls Toolbar -->
+    <section class="flex-none bg-cyberCard border border-cyberBorder rounded-lg px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+        
+        <!-- Song / Source Selector -->
+        <div class="flex items-center space-x-1.5 min-w-[240px] flex-grow sm:flex-grow-0">
+            <i class="fa-solid fa-music text-neonCyan text-xs"></i>
+            <select id="songSelect" onchange="changeSong(this.value)" class="w-full bg-slate-950 border border-slate-700 text-neonCyan font-mono text-xs rounded px-2 py-1 focus:outline-none focus:border-neonCyan cursor-pointer">
+            </select>
+        </div>
+
+        <!-- URL / File Input Section -->
+        <div class="flex items-center space-x-1.5 flex-grow max-w-md">
+            <input type="text" id="urlInput" placeholder="YouTube URL..." class="flex-1 bg-slate-950 border border-slate-800 text-slate-200 text-[11px] font-mono rounded px-2 py-1 focus:outline-none focus:border-neonCyan">
+            <button id="loadUrlBtn" onclick="loadFromUrl()" class="px-2.5 py-1 bg-neonCyan/20 border border-neonCyan/50 text-neonCyan font-mono text-[11px] rounded hover:bg-neonCyan/30 transition">
+                URL解析
+            </button>
+            <label class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[11px] rounded cursor-pointer border border-slate-700">
+                ファイル
+                <input type="file" id="audioFileInput" accept="audio/*" class="hidden" onchange="handleAudioFileUpload(event)">
+            </label>
+        </div>
+
+        <!-- Controls: Key, BPM, Guide Synth -->
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center space-x-1 bg-slate-950 border border-slate-800 rounded p-0.5">
+                <button onclick="changeKey(-1)" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-neonCyan rounded font-bold text-xs">♭</button>
+                <span id="keyDisplay" class="px-1 text-[10px] font-mono font-bold text-slate-200">KEY: 0</span>
+                <button onclick="changeKey(1)" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-neonCyan rounded font-bold text-xs">♯</button>
+            </div>
+
+            <div class="flex items-center space-x-1.5 bg-slate-950 border border-slate-800 rounded px-2 py-1">
+                <span class="text-[10px] font-mono text-slate-400">BPM</span>
+                <input id="bpmSlider" type="range" min="60" max="200" value="120" oninput="updateBPM(this.value)" class="w-14 sm:w-16 accent-neonCyan">
+                <span id="bpmDisplay" class="text-[10px] font-mono text-neonCyan w-6">120</span>
+            </div>
+
+            <div class="flex items-center space-x-1 bg-slate-950 border border-slate-800 rounded px-2 py-1">
+                <button id="guideToggle" onclick="toggleGuideSound()" class="text-[10px] font-mono text-slate-400 hover:text-slate-200 flex items-center space-x-1 mr-1">
+                    <i id="guideIcon" class="fa-solid fa-volume-xmark"></i>
+                    <span id="guideText">MUTED</span>
+                </button>
+                <select id="waveSelect" onchange="changeWaveform(this.value)" class="bg-slate-800 text-slate-300 font-mono text-[10px] rounded px-1 py-0.5 focus:outline-none">
+                    <option value="sawtooth">Saw Lead</option>
+                    <option value="sine">Pure Tone</option>
+                    <option value="triangle">Soft Flute</option>
+                    <option value="square">8-Bit Synth</option>
+                </select>
+            </div>
+
+            <div class="flex items-center space-x-1.5 bg-slate-950 border border-slate-800 rounded px-2 py-1 hidden lg:flex">
+                <i class="fa-solid fa-sliders text-neonMagenta text-[10px]"></i>
+                <span class="text-[10px] font-mono text-slate-400">GATE:</span>
+                <input id="noiseGateSlider" type="range" min="0.001" max="0.08" step="0.001" value="0.012" oninput="updateNoiseGate(this.value)" class="w-14 accent-neonMagenta">
+                <span id="noiseGateVal" class="text-[10px] font-mono text-neonMagenta">0.012</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-1.5">
+            <button id="playBtn" onclick="togglePlay()" class="px-3 py-1 bg-neonCyan text-slate-950 font-black text-xs rounded hover:bg-cyan-300 transition flex items-center space-x-1 shadow-md shadow-cyan-500/20">
+                <i id="playIcon" class="fa-solid fa-play"></i>
+                <span id="playText">START</span>
+            </button>
+            <button onclick="stopSong()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition">
+                <i class="fa-solid fa-square"></i>
+            </button>
+            <button onclick="openMidiModal()" class="px-2.5 py-1 bg-neonMagenta/20 border border-neonMagenta/50 hover:bg-neonMagenta/30 text-neonMagenta rounded text-xs font-mono transition flex items-center space-x-1">
+                <i class="fa-solid fa-file-upload"></i>
+                <span>MIDI</span>
+            </button>
+        </div>
+    </section>
+
+    <!-- 3. Real-Time HUD Overlay & Main Canvas Area -->
+    <main class="flex-1 min-h-0 flex flex-col bg-cyberCard border border-cyberBorder rounded-lg overflow-hidden relative shadow-2xl">
+        <div class="flex-none bg-slate-950/90 backdrop-blur border-b border-cyberBorder p-2 grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
+            <div class="bg-cyberCard/80 border border-slate-800 rounded p-1.5 flex flex-col justify-center">
+                <span class="text-[9px] font-mono text-slate-400">TARGET NOTE</span>
+                <div id="targetNote" class="text-lg sm:text-xl font-black font-mono text-neonCyan text-glow-cyan leading-tight">--</div>
+                <span id="targetHz" class="text-[9px] font-mono text-slate-500">0 Hz</span>
+            </div>
+
+            <div class="bg-cyberCard/80 border border-slate-800 rounded p-1.5 flex flex-col justify-center">
+                <span class="text-[9px] font-mono text-slate-400">USER PITCH</span>
+                <div id="sungNote" class="text-lg sm:text-xl font-black font-mono text-neonMagenta text-glow-magenta leading-tight">--</div>
+                <span id="sungHz" class="text-[9px] font-mono text-slate-500">0 Hz</span>
+            </div>
+
+            <div class="bg-cyberCard/80 border border-slate-800 rounded p-1.5 flex flex-col items-center justify-center">
+                <span class="text-[9px] font-mono text-slate-400 mb-0.5">EVALUATION</span>
+                <div id="ratingBadge" class="px-2 py-0.5 rounded text-[10px] font-black font-mono border border-slate-700 text-slate-500">
+                    READY
+                </div>
+            </div>
+
+            <div class="bg-cyberCard/80 border border-slate-800 rounded p-1.5 flex flex-col justify-center col-span-1">
+                <span class="text-[9px] font-mono text-slate-400">CENT ERROR</span>
+                <div class="w-full bg-slate-900 border border-slate-700 h-2.5 rounded-full relative overflow-hidden my-1">
+                    <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-500 transform -translate-x-1/2 z-10"></div>
+                    <div id="centIndicator" class="absolute top-0 bottom-0 w-2.5 bg-neonCyan rounded-full transform -translate-x-1/2 transition-all duration-75" style="left: 50%;"></div>
+                </div>
+                <span id="centText" class="text-[9px] font-mono text-slate-400">0 Cent</span>
+            </div>
+
+            <div class="bg-cyberCard/80 border border-slate-800 rounded p-1.5 flex flex-col justify-center">
+                <span class="text-[9px] font-mono text-slate-400">ACCURACY</span>
+                <div id="accuracyText" class="text-lg font-bold font-mono text-neonYellow text-glow-yellow leading-tight">100%</div>
+            </div>
+
+            <div class="bg-cyberCard/80 border border-slate-800 rounded p-1.5 flex flex-col justify-center">
+                <span class="text-[9px] font-mono text-slate-400">LIVE SCORE</span>
+                <div id="liveScore" class="text-lg font-black font-mono text-neonGreen text-glow-green leading-tight">000000</div>
+            </div>
+        </div>
+
+        <div class="flex-1 relative w-full h-full bg-slate-950 overflow-hidden">
+            <canvas id="pianoRollCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+            <div id="techniqueToastLayer" class="absolute top-3 right-4 pointer-events-none flex flex-col gap-1 z-30"></div>
+        </div>
+
+        <div class="flex-none bg-slate-950 border-t border-slate-800 px-3 py-1 flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <div class="flex items-center space-x-3">
+                <span class="flex items-center space-x-1">
+                    <span class="w-2.5 h-2.5 rounded bg-neonCyan inline-block shadow-sm"></span>
+                    <span>Target Guide Bar</span>
+                </span>
+                <span class="flex items-center space-x-1">
+                    <span class="w-2.5 h-2.5 rounded bg-neonMagenta inline-block shadow-sm"></span>
+                    <span>User Pitch Block</span>
+                </span>
+                <span class="flex items-center space-x-1">
+                    <span class="w-2 h-2 rounded-full bg-neonYellow inline-block shadow-sm"></span>
+                    <span>Perfect Pitch Overlay</span>
+                </span>
+            </div>
+            <div class="hidden sm:block text-slate-500">
+                PITCH TRAIN ENGINE • FASTAPI POWERED
+            </div>
+        </div>
+    </main>
+
+    <!-- 4. Bottom Skill Counters -->
+    <footer class="flex-none h-11 grid grid-cols-4 gap-2 text-xs">
+        <div class="bg-cyberCard/80 border border-slate-800 rounded px-2 py-1 flex items-center space-x-2">
+            <div class="w-6 h-6 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-wave-square"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-[9px] font-mono text-slate-400 truncate">VIBRATO (ビブラート)</div>
+                <div id="techVibrato" class="text-xs font-bold font-mono text-indigo-300">0</div>
+            </div>
+        </div>
+
+        <div class="bg-cyberCard/80 border border-slate-800 rounded px-2 py-1 flex items-center space-x-2">
+            <div class="w-6 h-6 rounded bg-teal-500/10 text-teal-400 border border-teal-500/30 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-arrows-left-right"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-[9px] font-mono text-slate-400 truncate">LONG TONE (ロング)</div>
+                <div id="techLongTone" class="text-xs font-bold font-mono text-teal-300">0</div>
+            </div>
+        </div>
+
+        <div class="bg-cyberCard/80 border border-slate-800 rounded px-2 py-1 flex items-center space-x-2">
+            <div class="w-6 h-6 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-arrow-trend-up"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-[9px] font-mono text-slate-400 truncate">SHAKURI (しゃくり)</div>
+                <div id="techSlideUp" class="text-xs font-bold font-mono text-amber-300">0</div>
+            </div>
+        </div>
+
+        <div class="bg-cyberCard/80 border border-slate-800 rounded px-2 py-1 flex items-center space-x-2">
+            <div class="w-6 h-6 rounded bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-arrow-trend-down"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-[9px] font-mono text-slate-400 truncate">FALL (フォール)</div>
+                <div id="techFall" class="text-xs font-bold font-mono text-rose-300">0</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Custom Toast Modal -->
+    <div id="customToastModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-cyberCard border border-neonCyan/50 rounded-xl p-5 max-w-xs w-full glow-cyan cyber-tile text-center space-y-3">
+            <div id="toastIcon" class="text-2xl text-neonCyan"><i class="fa-solid fa-circle-info"></i></div>
+            <h3 id="toastTitle" class="text-sm font-bold text-slate-100 font-mono">SYSTEM NOTIFICATION</h3>
+            <p id="toastMessage" class="text-xs text-slate-300 font-mono leading-relaxed"></p>
+            <button onclick="closeCustomToast()" class="px-4 py-1.5 bg-neonCyan text-slate-950 font-bold font-mono text-xs rounded hover:bg-cyan-300 transition">OK</button>
+        </div>
+    </div>
+
+    <!-- MIDI Import Modal -->
+    <div id="midiModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-cyberCard border border-neonCyan/50 rounded-xl p-5 max-w-md w-full glow-cyan cyber-tile">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-base font-bold text-neonCyan font-mono">IMPORT MIDI PRACTICE FILE</h3>
+                <button onclick="closeMidiModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            <p class="text-xs text-slate-300 mb-3 font-mono leading-relaxed">
+                Standard MIDIファイル (<span class="text-neonYellow">.mid / .midi</span>) を読み込み、ガイド音程ブロックを自動構築します。
+            </p>
+            <input type="file" id="midiFileInput" accept=".mid,.midi" class="hidden" onchange="handleMidiUpload(event)">
+            <button onclick="document.getElementById('midiFileInput').click()" class="w-full py-6 border-2 border-dashed border-slate-700 hover:border-neonCyan rounded-xl bg-slate-900/50 flex flex-col items-center justify-center text-slate-400 hover:text-neonCyan transition group">
+                <i class="fa-solid fa-file-arrow-up text-2xl mb-1 group-hover:scale-110 transition"></i>
+                <span class="text-xs font-mono">クリックしてMIDIファイルを選択</span>
+            </button>
+            <div class="mt-3 flex justify-end">
+                <button onclick="closeMidiModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono rounded">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Score Modal -->
+    <div id="scoreModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-lg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-cyberCard border border-neonMagenta rounded-xl p-5 max-w-xl w-full glow-magenta relative overflow-hidden max-h-[95vh] overflow-y-auto">
+            <div class="text-center mb-3">
+                <h2 class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neonCyan via-neonMagenta to-neonYellow tracking-widest font-mono">
+                    PERFORMANCE RESULT
+                </h2>
+                <p id="resSongTitle" class="text-xs text-slate-400 font-mono">Exercise Title</p>
+            </div>
+
+            <div class="flex justify-around items-center bg-slate-900/80 border border-slate-800 rounded-xl p-3 my-3">
+                <div class="text-center">
+                    <span class="text-[10px] font-mono text-slate-400">TOTAL SCORE</span>
+                    <div id="resFinalScore" class="text-3xl sm:text-4xl font-black font-mono text-neonCyan text-glow-cyan">98.45</div>
+                </div>
+                <div class="text-center">
+                    <span class="text-[10px] font-mono text-slate-400">RANK BADGE</span>
+                    <div id="resRankBadge" class="text-3xl sm:text-4xl font-black font-mono text-neonMagenta text-glow-magenta">SS</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 my-3 items-center">
+                <div class="space-y-2 font-mono text-xs">
+                    <div class="flex justify-between p-2 rounded bg-slate-900 border border-slate-800">
+                        <span class="text-slate-400">PITCH ACCURACY (正確性):</span>
+                        <span id="resPitchAcc" class="text-neonCyan font-bold">95.2%</span>
+                    </div>
+                    <div class="flex justify-between p-2 rounded bg-slate-900 border border-slate-800">
+                        <span class="text-slate-400">PITCH STABILITY (安定度):</span>
+                        <span id="resStability" class="text-neonGreen font-bold">88.5%</span>
+                    </div>
+                    <div class="flex justify-between p-2 rounded bg-slate-900 border border-slate-800">
+                        <span class="text-slate-400">RHYTHM TIMING (リズム感):</span>
+                        <span id="resRhythm" class="text-neonYellow font-bold">92.0%</span>
+                    </div>
+                    <div class="flex justify-between p-2 rounded bg-slate-900 border border-slate-800">
+                        <span class="text-slate-400">TECHNIQUES (表現加点):</span>
+                        <span id="resTechBonus" class="text-neonMagenta font-bold">+1200 PTS</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-center items-center">
+                    <canvas id="radarCanvas" width="180" height="180" class="block"></canvas>
+                </div>
+            </div>
+
+            <div class="flex justify-center space-x-3 mt-4">
+                <button onclick="closeScoreModal(); togglePlay();" class="px-5 py-2 bg-neonCyan text-slate-950 font-bold font-mono text-xs rounded hover:bg-cyan-300 transition">
+                    <i class="fa-solid fa-rotate-right mr-1.5"></i>RETRY
+                </button>
+                <button onclick="closeScoreModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs rounded transition">
+                    CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
