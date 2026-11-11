@@ -983,23 +983,20 @@ function closeCustomToast() {
     if (toastModal) toastModal.classList.add('hidden');
 }
 
-/* 完全リセット＆完全リスタート対応のリトライ関数 */
+/* 修正：初めに戻ったあと「一時停止（START待機）」状態にするリトライ関数 */
 window.retryGame = function() {
   // 1. スコア表示モーダルを閉じる
   closeScoreModal();
 
-  // 2. 音声再生の完全停止とオーディオプレイヤーの先頭巻き戻し
-  if (audioPlayer) {
-    audioPlayer.pause();
-    audioPlayer.currentTime = 0;
-  }
+  // 2. 音声再生の停止と巻き戻し（全初期化関数 stopSong を実行）
+  stopSong();
 
-  // 3. 進行時間・タイムスタンプの完全初期化（★ここが重要）
+  // 3. 進行時間・タイムスタンプの完全初期化
   isPlaying = false;
-  songTime = 0;          // 経過時間を0秒に巻き戻す
-  lastTimestamp = 0;     // gameLoop の deltaTime 急増を防止する
+  songTime = 0;
+  lastTimestamp = 0;
 
-  // 4. スコア・歌唱軌跡データを初期化
+  // 4. スコア・歌唱軌跡データをクリア
   userPitchBlocks = [];
   currentScore = 0;
   totalFramesEvaluated = 0;
@@ -1011,12 +1008,13 @@ window.retryGame = function() {
   techSlideUpCount = 0;
   techFallCount = 0;
 
-  // 5. UI（HUDおよびテクニック表示）のリセット
+  // 5. UI（HUDおよびテクニック表示）を初期状態にセット
   updateHUD(null, 0, 0, 'READY', 0);
   updateTechniquesUI();
 
-  // 6. 状態変更を確実に反映させたあと最初からスタート
-  setTimeout(() => {
-    startSong();
-  }, 100);
+  // 6. 再生ボタンの表示を「START」に戻す
+  const playIcon = document.getElementById('playIcon');
+  const playText = document.getElementById('playText');
+  if (playIcon) playIcon.className = 'fa-solid fa-play';
+  if (playText) playText.innerText = 'START';
 };
