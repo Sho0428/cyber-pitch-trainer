@@ -42,7 +42,6 @@ def process_audio_file(file_path, manual_bpm=116.0):
     hop_length = 512
     frame_time = hop_length / sr
 
-    # 1. BPM検出 ＆ 16分音符/8分音符長の算出
     if manual_bpm and manual_bpm > 0:
         bpm = manual_bpm
     else:
@@ -54,7 +53,6 @@ def process_audio_file(file_path, manual_bpm=116.0):
     sixteenth_note_dur = 60.0 / (bpm * 4.0)
     eighth_note_dur = 60.0 / (bpm * 2.0)
 
-    # 2. HPSS ＆ 音量閾値自動フィッティング
     y_harmonic, _ = librosa.effects.hpss(y)
     rms_raw = librosa.feature.rms(y=y, hop_length=hop_length)[0]
     rms_harm = librosa.feature.rms(y=y_harmonic, hop_length=hop_length)[0]
@@ -66,7 +64,6 @@ def process_audio_file(file_path, manual_bpm=116.0):
     else:
         auto_rms_threshold = np.mean(rms_max) * 0.05
 
-    # 3. pYIN ピッチ抽出
     f0, voiced_flag, voiced_probs = librosa.pyin(
         y_harmonic,
         fmin=librosa.note_to_hz('C2'),
@@ -86,7 +83,6 @@ def process_audio_file(file_path, manual_bpm=116.0):
     cleaned = np.where((voiced_probs >= auto_prob_threshold) & (rms_max > auto_rms_threshold) & (midi_notes > 0), midi_notes, 0)
     cleaned = np.nan_to_num(cleaned, nan=0)
 
-    # 4. BPM基盤の動的補間
     filled_notes = np.copy(cleaned)
     max_gap_frames = max(2, int(eighth_note_dur / frame_time))
     
@@ -103,7 +99,6 @@ def process_audio_file(file_path, manual_bpm=116.0):
                     filled_notes[i - gap_len : i] = interp_vals
             gap_len = 0
 
-    # 5. 平滑化
     kernel_size = max(3, int(sixteenth_note_dur / frame_time))
     if kernel_size % 2 == 0:
         kernel_size += 1
@@ -111,7 +106,6 @@ def process_audio_file(file_path, manual_bpm=116.0):
     filtered = medfilt(filled_notes, kernel_size=kernel_size)
     dt = float(times[1] - times[0]) if len(times) > 1 else 0.023
     
-    # 6. ガイドバー型ノート群（半音単位の矩形ノート）への変換処理
     notes_data = []
     current_bar = None
 
@@ -148,6 +142,15 @@ def process_audio_file(file_path, manual_bpm=116.0):
 @app.get("/")
 def read_index():
     return FileResponse("index.html")
+
+# ★ songs.json をフロントエンドに配信するルーティング
+@app.get("/songs.json")
+def get_songs_json():
+    songs_path = "songs.json"
+    if os.path.exists(songs_path):
+        return FileResponse(songs_path)
+    else:
+        raise HTTPException(status_code=404, detail="songs.json が見つかりません。ルートフォルダに作成してください。")
 
 @app.post("/api/upload-file")
 async def upload_file(file: UploadFile = File(...)):
@@ -220,8 +223,8 @@ def load_from_url(req: UrlRequest):
         raise HTTPException(status_code=400, detail=f"音源取得エラー: {str(e)}")
 
 app.mount("/temp_audio", StaticFiles(directory=TEMP_DIR), name="temp_audio")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/", StaticFiles(directory="."), name="static")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    uvicorn.run(app, host="127.0.0.1", port=8000)
