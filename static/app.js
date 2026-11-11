@@ -95,6 +95,7 @@ async function loadSongsJson() {
 
 function populateSongSelect() {
     const select = document.getElementById('songSelect');
+    if (!select) return;
     select.innerHTML = '';
     songs.forEach((s, idx) => {
         const opt = document.createElement('option');
@@ -112,17 +113,21 @@ function changeSong(index) {
     } else {
         audioPlayer.src = '';
     }
-    document.getElementById('bpmSlider').value = currentSong.bpm || 120;
-    document.getElementById('bpmDisplay').innerText = currentSong.bpm || 120;
+    const bpmSlider = document.getElementById('bpmSlider');
+    if (bpmSlider) bpmSlider.value = currentSong.bpm || 120;
+    const bpmDisplay = document.getElementById('bpmDisplay');
+    if (bpmDisplay) bpmDisplay.innerText = currentSong.bpm || 120;
 }
 
 function changeKey(delta) {
     keyTranspose = Math.max(-6, Math.min(6, keyTranspose + delta));
-    document.getElementById('keyDisplay').innerText = `KEY: ${keyTranspose > 0 ? '+' : ''}${keyTranspose}`;
+    const keyDisplay = document.getElementById('keyDisplay');
+    if (keyDisplay) keyDisplay.innerText = `KEY: ${keyTranspose > 0 ? '+' : ''}${keyTranspose}`;
 }
 
 function updateBPM(val) {
-    document.getElementById('bpmDisplay').innerText = val;
+    const bpmDisplay = document.getElementById('bpmDisplay');
+    if (bpmDisplay) bpmDisplay.innerText = val;
     if (currentSong) currentSong.bpm = parseFloat(val);
 }
 
@@ -131,13 +136,17 @@ function toggleGuideSound() {
     const icon = document.getElementById('guideIcon');
     const txt = document.getElementById('guideText');
     if (guideSoundEnabled) {
-        icon.className = 'fa-solid fa-volume-high text-neonCyan';
-        txt.innerText = 'GUIDE';
-        txt.className = 'text-neonCyan';
+        if (icon) icon.className = 'fa-solid fa-volume-high text-neonCyan';
+        if (txt) {
+            txt.innerText = 'GUIDE';
+            txt.className = 'text-neonCyan';
+        }
     } else {
-        icon.className = 'fa-solid fa-volume-xmark text-slate-400';
-        txt.innerText = 'MUTED';
-        txt.className = 'text-slate-400';
+        if (icon) icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+        if (txt) {
+            txt.innerText = 'MUTED';
+            txt.className = 'text-slate-400';
+        }
         if (guideGain) guideGain.gain.value = 0;
     }
 }
@@ -149,7 +158,8 @@ function changeWaveform(wave) {
 
 function updateNoiseGate(val) {
     noiseGateThreshold = parseFloat(val);
-    document.getElementById('noiseGateVal').innerText = val;
+    const gateVal = document.getElementById('noiseGateVal');
+    if (gateVal) gateVal.innerText = val;
 }
 
 /* Audio & Microphone Engine */
@@ -185,9 +195,13 @@ async function toggleMicrophone() {
             micSource.connect(analyser);
 
             isMicActive = true;
-            document.getElementById('micDot').className = "w-2 h-2 rounded-full bg-neonGreen animate-pulse";
-            document.getElementById('micText').innerText = "MIC: ACTIVE";
-            document.getElementById('micText').className = "text-[10px] font-mono text-neonGreen";
+            const micDot = document.getElementById('micDot');
+            const micText = document.getElementById('micText');
+            if (micDot) micDot.className = "w-2 h-2 rounded-full bg-neonGreen animate-pulse";
+            if (micText) {
+                micText.innerText = "MIC: ACTIVE";
+                micText.className = "text-[10px] font-mono text-neonGreen";
+            }
         } catch (err) {
             showCustomToast("MICROPHONE ERROR", "マイクへのアクセスに失敗しました: " + err.message);
         }
@@ -196,9 +210,13 @@ async function toggleMicrophone() {
             micStream.getTracks().forEach(track => track.stop());
         }
         isMicActive = false;
-        document.getElementById('micDot').className = "w-2 h-2 rounded-full bg-red-500";
-        document.getElementById('micText').innerText = "MIC: OFF";
-        document.getElementById('micText').className = "text-[10px] font-mono text-slate-300";
+        const micDot = document.getElementById('micDot');
+        const micText = document.getElementById('micText');
+        if (micDot) micDot.className = "w-2 h-2 rounded-full bg-red-500";
+        if (micText) {
+            micText.innerText = "MIC: OFF";
+            micText.className = "text-[10px] font-mono text-slate-300";
+        }
     }
 }
 
@@ -282,12 +300,15 @@ function autoCorrelate(buf, sampleRate) {
 
 /* API Integration (URL & File Loading) */
 async function loadFromUrl() {
-    const url = document.getElementById('urlInput').value.trim();
+    const urlInput = document.getElementById('urlInput');
+    const url = urlInput ? urlInput.value.trim() : '';
     if (!url) { showCustomToast("INPUT ERROR", "URLを入力してください。"); return; }
 
     const btn = document.getElementById('loadUrlBtn');
-    btn.disabled = true;
-    btn.innerText = "解析中...";
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "解析中...";
+    }
 
     try {
         const res = await fetch('/api/load-url', {
@@ -306,7 +327,8 @@ async function loadFromUrl() {
             };
             songs.push(newSong);
             populateSongSelect();
-            document.getElementById('songSelect').value = songs.length - 1;
+            const songSelect = document.getElementById('songSelect');
+            if (songSelect) songSelect.value = songs.length - 1;
             changeSong(songs.length - 1);
             showCustomToast("SUCCESS", "音源の解析とガイドバーの作成が完了しました！");
         } else {
@@ -315,8 +337,10 @@ async function loadFromUrl() {
     } catch (e) {
         showCustomToast("SERVER ERROR", "サーバーとの通信に失敗しました。");
     } finally {
-        btn.disabled = false;
-        btn.innerText = "URL解析";
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "URL解析";
+        }
     }
 }
 
@@ -344,7 +368,8 @@ async function handleAudioFileUpload(event) {
             };
             songs.push(newSong);
             populateSongSelect();
-            document.getElementById('songSelect').value = songs.length - 1;
+            const songSelect = document.getElementById('songSelect');
+            if (songSelect) songSelect.value = songs.length - 1;
             changeSong(songs.length - 1);
             showCustomToast("SUCCESS", "ファイルの解析が完了しました！");
         } else {
@@ -368,27 +393,31 @@ function togglePlay() {
 function startSong() {
     initAudio();
     isPlaying = true;
-    if (currentSong.audio_url) {
+    if (currentSong && currentSong.audio_url) {
         audioPlayer.play();
     }
-    document.getElementById('playIcon').className = 'fa-solid fa-pause';
-    document.getElementById('playText').innerText = 'PAUSE';
+    const playIcon = document.getElementById('playIcon');
+    const playText = document.getElementById('playText');
+    if (playIcon) playIcon.className = 'fa-solid fa-pause';
+    if (playText) playText.innerText = 'PAUSE';
     if (!isMicActive) toggleMicrophone();
 }
 
 function pauseSong() {
     isPlaying = false;
-    if (currentSong.audio_url) {
+    if (currentSong && currentSong.audio_url) {
         audioPlayer.pause();
     }
-    document.getElementById('playIcon').className = 'fa-solid fa-play';
-    document.getElementById('playText').innerText = 'RESUME';
+    const playIcon = document.getElementById('playIcon');
+    const playText = document.getElementById('playText');
+    if (playIcon) playIcon.className = 'fa-solid fa-play';
+    if (playText) playText.innerText = 'RESUME';
     if (guideGain) guideGain.gain.value = 0;
 }
 
 function stopSong() {
     isPlaying = false;
-    if (currentSong.audio_url) {
+    if (audioPlayer) {
         audioPlayer.pause();
         audioPlayer.currentTime = 0;
     }
@@ -404,8 +433,10 @@ function stopSong() {
     techSlideUpCount = 0;
     techFallCount = 0;
 
-    document.getElementById('playIcon').className = 'fa-solid fa-play';
-    document.getElementById('playText').innerText = 'START';
+    const playIcon = document.getElementById('playIcon');
+    const playText = document.getElementById('playText');
+    if (playIcon) playIcon.className = 'fa-solid fa-play';
+    if (playText) playText.innerText = 'START';
     if (guideGain) guideGain.gain.value = 0;
 
     updateHUD(null, 0, 0, 'READY', 0);
@@ -418,14 +449,14 @@ function gameLoop(timestamp) {
     lastTimestamp = timestamp;
 
     if (isPlaying) {
-        if (currentSong.audio_url) {
+        if (currentSong && currentSong.audio_url) {
             songTime = audioPlayer.currentTime;
         } else {
             songTime += deltaTime;
         }
         evaluatePerformance();
 
-        const maxTime = currentSong.notes.length > 0 
+        const maxTime = (currentSong && currentSong.notes && currentSong.notes.length > 0)
             ? currentSong.notes[currentSong.notes.length - 1].time + currentSong.notes[currentSong.notes.length - 1].duration + 1.5 
             : 15;
         
@@ -479,7 +510,7 @@ function recordUserPitchBlock(time, midi, freq) {
 }
 
 function evaluatePerformance() {
-    if (!currentSong) return;
+    if (!currentSong || !currentSong.notes) return;
 
     const activeNote = currentSong.notes.find(n => 
         songTime >= n.time && songTime <= (n.time + n.duration)
@@ -489,7 +520,7 @@ function evaluatePerformance() {
         const targetMidi = activeNote.midi + keyTranspose;
         const targetFreq = midiToFreq(targetMidi);
 
-        if (guideSoundEnabled && guideGain) {
+        if (guideSoundEnabled && guideGain && synthOsc) {
             synthOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.015);
             guideGain.gain.setTargetAtTime(0.18, audioCtx.currentTime, 0.015);
         }
@@ -517,47 +548,58 @@ function evaluatePerformance() {
             updateHUD(targetMidi, targetFreq, 0, 'MISS', 0);
         }
     } else {
-        if (guideGain) guideGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.015);
+        if (guideGain && audioCtx) guideGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.015);
         updateHUD(null, 0, currentSungFreq, 'READY', 0);
     }
 }
 
 function updateHUD(targetMidi, targetFreq, sungFreq, rating, centDiff) {
-    document.getElementById('targetNote').innerText = targetMidi ? midiToNoteName(targetMidi) : '--';
-    document.getElementById('targetHz').innerText = targetFreq ? `${Math.round(targetFreq)} Hz` : '0 Hz';
+    const targetNoteEl = document.getElementById('targetNote');
+    const targetHzEl = document.getElementById('targetHz');
+    const sungNoteEl = document.getElementById('sungNote');
+    const sungHzEl = document.getElementById('sungHz');
+
+    if (targetNoteEl) targetNoteEl.innerText = targetMidi ? midiToNoteName(targetMidi) : '--';
+    if (targetHzEl) targetHzEl.innerText = targetFreq ? `${Math.round(targetFreq)} Hz` : '0 Hz';
 
     const sungMidi = freqToMidi(sungFreq);
-    document.getElementById('sungNote').innerText = sungMidi ? midiToNoteName(sungMidi) : '--';
-    document.getElementById('sungHz').innerText = sungFreq ? `${Math.round(sungFreq)} Hz` : '0 Hz';
+    if (sungNoteEl) sungNoteEl.innerText = sungMidi ? midiToNoteName(sungMidi) : '--';
+    if (sungHzEl) sungHzEl.innerText = sungFreq ? `${Math.round(sungFreq)} Hz` : '0 Hz';
 
     const badge = document.getElementById('ratingBadge');
-    badge.innerText = rating;
-    if (rating === 'PERFECT') {
-        badge.className = "px-2 py-0.5 rounded text-[10px] font-black font-mono border border-neonGreen text-neonGreen bg-neonGreen/10 animate-bounce";
-    } else if (rating === 'GOOD') {
-        badge.className = "px-2 py-0.5 rounded text-[10px] font-black font-mono border border-neonYellow text-neonYellow bg-neonYellow/10";
-    } else if (rating === 'MISS') {
-        badge.className = "px-2 py-0.5 rounded text-[10px] font-black font-mono border border-neonRed text-neonRed bg-neonRed/10";
-    } else {
-        badge.className = "px-2 py-0.5 rounded text-[10px] font-black font-mono border border-slate-700 text-slate-500";
+    if (badge) {
+        badge.innerText = rating;
+        if (rating === 'PERFECT') {
+            badge.className = "px-2 py-0.5 rounded text-[10px] font-black font-mono border border-neonGreen text-neonGreen bg-neonGreen/10 animate-bounce";
+        } else if (rating === 'GOOD') {
+            badge.className = "px-2 py-0.5 rounded text-[10px] font-black font-mono border border-neonYellow text-neonYellow bg-neonYellow/10";
+        } else if (rating === 'MISS') {
+            badge.className = "px-2 py-0.5 rounded text-[10px] font-black font-mono border border-neonRed text-neonRed bg-neonRed/10";
+        } else {
+            badge.className = "px-2 py-0.5 rounded text-[10px] font-black font-mono border border-slate-700 text-slate-500";
+        }
     }
 
     const indicator = document.getElementById('centIndicator');
     const centText = document.getElementById('centText');
-    if (sungFreq > 0 && targetFreq > 0) {
-        const cents = getCentsOffset(sungFreq, targetFreq);
-        const clampedCents = Math.max(-50, Math.min(50, cents));
-        const posPercent = 50 + (clampedCents / 50) * 45;
-        indicator.style.left = `${posPercent}%`;
-        centText.innerText = `${cents > 0 ? '+' : ''}${cents} Cent`;
-    } else {
-        indicator.style.left = `50%`;
-        centText.innerText = `0 Cent`;
+    if (indicator && centText) {
+        if (sungFreq > 0 && targetFreq > 0) {
+            const cents = getCentsOffset(sungFreq, targetFreq);
+            const clampedCents = Math.max(-50, Math.min(50, cents));
+            const posPercent = 50 + (clampedCents / 50) * 45;
+            indicator.style.left = `${posPercent}%`;
+            centText.innerText = `${cents > 0 ? '+' : ''}${cents} Cent`;
+        } else {
+            indicator.style.left = `50%`;
+            centText.innerText = `0 Cent`;
+        }
     }
 
     const acc = totalFramesEvaluated > 0 ? Math.round(((perfectHits + goodHits * 0.5) / totalFramesEvaluated) * 100) : 100;
-    document.getElementById('accuracyText').innerText = `${acc}%`;
-    document.getElementById('liveScore').innerText = String(currentScore).padStart(6, '0');
+    const accEl = document.getElementById('accuracyText');
+    const liveScoreEl = document.getElementById('liveScore');
+    if (accEl) accEl.innerText = `${acc}%`;
+    if (liveScoreEl) liveScoreEl.innerText = String(currentScore).padStart(6, '0');
 }
 
 function detectVocalTechniques(freq) {
@@ -608,14 +650,19 @@ function detectVocalTechniques(freq) {
 }
 
 function updateTechniquesUI() {
-    document.getElementById('techVibrato').innerText = techVibratoCount;
-    document.getElementById('techLongTone').innerText = techLongToneCount;
-    document.getElementById('techSlideUp').innerText = techSlideUpCount;
-    document.getElementById('techFall').innerText = techFallCount;
+    const v = document.getElementById('techVibrato');
+    const l = document.getElementById('techLongTone');
+    const s = document.getElementById('techSlideUp');
+    const f = document.getElementById('techFall');
+    if (v) v.innerText = techVibratoCount;
+    if (l) l.innerText = techLongToneCount;
+    if (s) s.innerText = techSlideUpCount;
+    if (f) f.innerText = techFallCount;
 }
 
 function triggerTechniquePopup(name) {
     const layer = document.getElementById('techniqueToastLayer');
+    if (!layer) return;
     const toast = document.createElement('div');
     toast.className = "bg-neonMagenta text-slate-950 font-black font-mono px-2.5 py-1 text-xs rounded shadow-lg animate-bounce";
     toast.innerText = `★ ${name}`;
@@ -628,6 +675,7 @@ let canvas, ctx;
 
 function initCanvas() {
     canvas = document.getElementById('pianoRollCanvas');
+    if (!canvas) return;
     ctx = canvas.getContext('2d');
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
@@ -649,7 +697,7 @@ function renderPianoRoll() {
     ctx.fillRect(0, 0, width, height);
 
     let minMidi = 55, maxMidi = 77;
-    if (currentSong && currentSong.notes.length > 0) {
+    if (currentSong && currentSong.notes && currentSong.notes.length > 0) {
         const songMidis = currentSong.notes.map(n => n.midi + keyTranspose);
         minMidi = Math.min(...songMidis) - 3;
         maxMidi = Math.max(...songMidis) + 3;
@@ -758,11 +806,13 @@ function renderPianoRoll() {
 
 /* Modal Engine */
 function openMidiModal() {
-    document.getElementById('midiModal').classList.remove('hidden');
+    const modal = document.getElementById('midiModal');
+    if (modal) modal.classList.remove('hidden');
 }
 
 function closeMidiModal() {
-    document.getElementById('midiModal').classList.add('hidden');
+    const modal = document.getElementById('midiModal');
+    if (modal) modal.classList.add('hidden');
 }
 
 async function handleMidiUpload(event) {
@@ -802,7 +852,8 @@ async function handleMidiUpload(event) {
 
         songs.push(newSong);
         populateSongSelect();
-        document.getElementById('songSelect').value = songs.length - 1;
+        const songSelect = document.getElementById('songSelect');
+        if (songSelect) songSelect.value = songs.length - 1;
         changeSong(songs.length - 1);
 
         closeMidiModal();
@@ -814,9 +865,11 @@ async function handleMidiUpload(event) {
 
 function showScoreModal() {
     const modal = document.getElementById('scoreModal');
+    if (!modal) return;
     modal.classList.remove('hidden');
 
-    document.getElementById('resSongTitle').innerText = `${currentSong.title}`;
+    const resSongTitle = document.getElementById('resSongTitle');
+    if (resSongTitle && currentSong) resSongTitle.innerText = `${currentSong.title}`;
 
     const pitchAcc = totalFramesEvaluated > 0 ? Math.min(100, Math.round((perfectHits / totalFramesEvaluated) * 100)) : 80;
     const rhythmVal = Math.min(100, Math.round(85 + Math.random() * 10));
@@ -824,28 +877,36 @@ function showScoreModal() {
     const techBonus = (techVibratoCount + techLongToneCount + techSlideUpCount + techFallCount) * 300;
 
     const finalScoreVal = Math.min(100, (pitchAcc * 0.5 + rhythmVal * 0.25 + stabilityVal * 0.25 + (techBonus / 1000))).toFixed(2);
-    document.getElementById('resFinalScore').innerText = finalScoreVal;
+    const resFinalScore = document.getElementById('resFinalScore');
+    if (resFinalScore) resFinalScore.innerText = finalScoreVal;
 
     let rank = 'B';
     if (finalScoreVal >= 95) rank = 'SS';
     else if (finalScoreVal >= 88) rank = 'S';
     else if (finalScoreVal >= 78) rank = 'A';
-    document.getElementById('resRankBadge').innerText = rank;
+    const resRankBadge = document.getElementById('resRankBadge');
+    if (resRankBadge) resRankBadge.innerText = rank;
 
-    document.getElementById('resPitchAcc').innerText = `${pitchAcc}%`;
-    document.getElementById('resStability').innerText = `${stabilityVal}%`;
-    document.getElementById('resRhythm').innerText = `${rhythmVal}%`;
-    document.getElementById('resTechBonus').innerText = `+${techBonus} PTS`;
+    const resPitchAcc = document.getElementById('resPitchAcc');
+    const resStability = document.getElementById('resStability');
+    const resRhythm = document.getElementById('resRhythm');
+    const resTechBonus = document.getElementById('resTechBonus');
+    if (resPitchAcc) resPitchAcc.innerText = `${pitchAcc}%`;
+    if (resStability) resStability.innerText = `${stabilityVal}%`;
+    if (resRhythm) resRhythm.innerText = `${rhythmVal}%`;
+    if (resTechBonus) resTechBonus.innerText = `+${techBonus} PTS`;
 
     renderRadarChart(pitchAcc, rhythmVal, stabilityVal, Math.min(100, 70 + techBonus / 50));
 }
 
 function closeScoreModal() {
-    document.getElementById('scoreModal').classList.add('hidden');
+    const modal = document.getElementById('scoreModal');
+    if (modal) modal.classList.add('hidden');
 }
 
 function renderRadarChart(pitch, rhythm, stability, tech) {
     const rCanvas = document.getElementById('radarCanvas');
+    if (!rCanvas) return;
     const rCtx = rCanvas.getContext('2d');
     const W = rCanvas.width, H = rCanvas.height;
     const centerX = W / 2, centerY = H / 2, radius = 55;
@@ -909,111 +970,50 @@ function renderRadarChart(pitch, rhythm, stability, tech) {
 }
 
 function showCustomToast(title, message) {
-    document.getElementById('toastTitle').innerText = title;
-    document.getElementById('toastMessage').innerText = message;
-    document.getElementById('customToastModal').classList.remove('hidden');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastMessage = document.getElementById('toastMessage');
+    const toastModal = document.getElementById('customToastModal');
+    if (toastTitle) toastTitle.innerText = title;
+    if (toastMessage) toastMessage.innerText = message;
+    if (toastModal) toastModal.classList.remove('hidden');
 }
 
 function closeCustomToast() {
-    document.getElementById('customToastModal').classList.add('hidden');
+    const toastModal = document.getElementById('customToastModal');
+    if (toastModal) toastModal.classList.add('hidden');
 }
 
-// リトライ処理（最初からやり直す）
-function retryGame() {
-  // 1. スコア表示モーダルを閉じる
-  if (typeof closeScoreModal === 'function') {
-    closeScoreModal();
-  }
-
-  // 2. 音声再生の停止と再生位置のリセット (先頭0秒に戻す)
-  if (window.audioElement) {
-    window.audioElement.pause();
-    window.audioElement.currentTime = 0;
-  }
-
-  // Tone.js を使用している場合
-  if (typeof Tone !== 'undefined' && Tone.Transport) {
-    Tone.Transport.stop();
-    Tone.Transport.seconds = 0;
-  }
-
-  // 3. アニメーションフレームの停止
-  if (window.animationFrameId) {
-    cancelAnimationFrame(window.animationFrameId);
-    window.animationFrameId = null;
-  }
-
-  // 4. スコアやノート位置などの状態初期化
-  window.currentScore = 0;
-  window.currentNoteIndex = 0;
-  window.userPitchHistory = [];
-  window.isPlaying = false;
-
-  // 5. キャンバスの描画クリア
-  const canvas = document.getElementById('pitch-canvas');
-  if (canvas) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
-
-  // 6. 再生を最初から再開
-  // ※お使いのスタート関数の名前（togglePlay, startGame など）に合わせて呼び出してください
-  if (typeof togglePlay === 'function') {
-    togglePlay(); 
-  }
-}
-
-// リトライ処理（完全リセット＆最初から再スタート）
+/* 修正：完全初期化＆完全リスタート対応のリトライ関数 */
 window.retryGame = function() {
-  // 1. 進行中・再生中のフラグを即時停止
-  window.isPlaying = false;
+  // 1. スコア表示モーダルを閉じる
+  closeScoreModal();
 
-  // 2. 音声を先頭（0秒）に戻して一時停止
-  if (window.audioElement) {
-    window.audioElement.pause();
-    window.audioElement.currentTime = 0;
-  }
-  
-  // Tone.js やその他のオーディオエンジンを使用している場合のリセット
-  if (typeof Tone !== 'undefined' && Tone.Transport) {
-    Tone.Transport.stop();
-    Tone.Transport.seconds = 0;
+  // 2. 音声再生の完全停止と先頭巻き戻し
+  if (audioPlayer) {
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
   }
 
-  // 3. アニメーションフレームループの破棄
-  if (window.animationFrameId) {
-    cancelAnimationFrame(window.animationFrameId);
-    window.animationFrameId = null;
-  }
+  // 3. タイマー・スコア・歌唱軌跡データを完全初期化
+  isPlaying = false;
+  songTime = 0;
+  userPitchBlocks = [];
+  currentScore = 0;
+  totalFramesEvaluated = 0;
+  perfectHits = 0;
+  goodHits = 0;
+  totalCentsDiff = 0;
+  techVibratoCount = 0;
+  techLongToneCount = 0;
+  techSlideUpCount = 0;
+  techFallCount = 0;
 
-  // 4. スコア・判定・描画関連の変数を完全リセット
-  window.currentScore = 0;
-  window.currentNoteIndex = 0;
-  window.userPitchHistory = [];
-  if (typeof songProgress !== 'undefined') window.songProgress = 0;
+  // 4. UI（HUDとテクニック表示）のリセット
+  updateHUD(null, 0, 0, 'READY', 0);
+  updateTechniquesUI();
 
-  // 5. キャンバス（ピッチ軌跡）のクリア
-  const canvas = document.getElementById('pitch-canvas');
-  if (canvas) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
-
-  // 6. スコア表示モーダルを閉じる
-  if (typeof closeScoreModal === 'function') {
-    closeScoreModal();
-  } else {
-    const scoreModal = document.getElementById('score-modal');
-    if (scoreModal) scoreModal.classList.add('hidden');
-  }
-
-  // 7. 最初から再スタート（わずかに遅延を入れて状態反映を確実にする）
+  // 5. 少しディレイを挟んで確実に最初からスタート
   setTimeout(() => {
-    if (typeof togglePlay === 'function') {
-      // togglePlay が「停止中なら再生開始する」仕様の場合、確実にスタート
-      togglePlay();
-    } else if (typeof startGame === 'function') {
-      startGame();
-    }
+    startSong();
   }, 100);
 };
