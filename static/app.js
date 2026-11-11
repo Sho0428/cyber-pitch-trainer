@@ -21,52 +21,10 @@ function getCentsOffset(sungFreq, targetFreq) {
     return Math.floor(1200 * Math.log2(sungFreq / targetFreq));
 }
 
-/* Preset Practice Songs */
-const PRESET_PRACTICES = [
-    {
-        id: 'sakura-sakura',
-        title: 'さくらさくら (Sakura Sakura)',
-        artist: 'Japanese Traditional Practice',
-        bpm: 80,
-        audio_url: null,
-        notes: [
-            { midi: 69, time: 0.5, duration: 1.0 },
-            { midi: 69, time: 1.6, duration: 1.0 },
-            { midi: 71, time: 2.7, duration: 1.8 },
-            { midi: 69, time: 4.6, duration: 1.0 },
-            { midi: 69, time: 5.7, duration: 1.0 },
-            { midi: 71, time: 6.8, duration: 1.8 },
-            { midi: 69, time: 8.7, duration: 0.8 },
-            { midi: 71, time: 9.6, duration: 0.8 },
-            { midi: 72, time: 10.5, duration: 1.0 },
-            { midi: 71, time: 11.6, duration: 1.0 },
-            { midi: 69, time: 12.7, duration: 0.8 },
-            { midi: 71, time: 13.6, duration: 0.8 },
-            { midi: 69, time: 14.5, duration: 1.8 }
-        ]
-    },
-    {
-        id: 'c-major-scale',
-        title: '基礎スケール (C Major Scale)',
-        artist: 'Basic Pitch Training',
-        bpm: 100,
-        audio_url: null,
-        notes: [
-            { midi: 60, time: 0.5, duration: 0.8 },
-            { midi: 62, time: 1.5, duration: 0.8 },
-            { midi: 64, time: 2.5, duration: 0.8 },
-            { midi: 65, time: 3.5, duration: 0.8 },
-            { midi: 67, time: 4.5, duration: 0.8 },
-            { midi: 69, time: 5.5, duration: 0.8 },
-            { midi: 71, time: 6.5, duration: 0.8 },
-            { midi: 72, time: 7.5, duration: 1.5 }
-        ]
-    }
-];
+let songs = [];
+let currentSong = null;
 
 /* Global State */
-let songs = [...PRESET_PRACTICES];
-let currentSong = songs[0];
 let keyTranspose = 0;
 let isPlaying = false;
 let songTime = 0;
@@ -105,16 +63,34 @@ let techFallCount = 0;
 let pitchBufferForTech = [];
 let longToneFrames = 0;
 
-window.onload = () => {
+window.onload = async () => {
     if (window.location.protocol === 'file:') {
         const warn = document.getElementById('fileProtocolWarning');
         if (warn) warn.classList.remove('hidden');
     }
 
-    populateSongSelect();
+    await loadSongsJson();
     initCanvas();
     requestAnimationFrame(gameLoop);
 };
+
+// JSONファイルから曲データをロードする関数
+async function loadSongsJson() {
+    try {
+        const response = await fetch('/songs.json');
+        if (response.ok) {
+            songs = await response.json();
+            if (songs.length > 0) {
+                currentSong = songs[0];
+            }
+        } else {
+            console.warn("songs.json の読み込みに失敗しました。");
+        }
+    } catch (error) {
+        console.error("songs.json 取得エラー:", error);
+    }
+    populateSongSelect();
+}
 
 function populateSongSelect() {
     const select = document.getElementById('songSelect');
