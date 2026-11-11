@@ -962,3 +962,47 @@ function retryGame() {
     togglePlay(); 
   }
 }
+
+// リトライボタン用グローバル関数の定義
+window.retryGame = function() {
+  // 1. スコア表示モーダルを非表示にする
+  if (typeof closeScoreModal === 'function') {
+    closeScoreModal();
+  }
+
+  // 2. 音声再生の停止と再生位置のリセット (先頭0秒に戻す)
+  if (window.audioElement) {
+    window.audioElement.pause();
+    window.audioElement.currentTime = 0;
+  }
+
+  // Tone.js を使用している場合
+  if (typeof Tone !== 'undefined' && Tone.Transport) {
+    Tone.Transport.stop();
+    Tone.Transport.seconds = 0;
+  }
+
+  // 3. アニメーションフレームの停止
+  if (window.animationFrameId) {
+    cancelAnimationFrame(window.animationFrameId);
+    window.animationFrameId = null;
+  }
+
+  // 4. スコアやノート判定インデックスなどの状態初期化
+  window.currentScore = 0;
+  window.currentNoteIndex = 0;
+  window.userPitchHistory = [];
+  window.isPlaying = false;
+
+  // 5. キャンバスの描画をクリア
+  const canvas = document.getElementById('pitch-canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // 6. 最初から再スタート
+  if (typeof togglePlay === 'function') {
+    togglePlay();
+  }
+};
