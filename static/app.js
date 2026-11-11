@@ -983,20 +983,23 @@ function closeCustomToast() {
     if (toastModal) toastModal.classList.add('hidden');
 }
 
-/* 修正：完全初期化＆完全リスタート対応のリトライ関数 */
+/* 完全リセット＆完全リスタート対応のリトライ関数 */
 window.retryGame = function() {
   // 1. スコア表示モーダルを閉じる
   closeScoreModal();
 
-  // 2. 音声再生の完全停止と先頭巻き戻し
+  // 2. 音声再生の完全停止とオーディオプレイヤーの先頭巻き戻し
   if (audioPlayer) {
     audioPlayer.pause();
     audioPlayer.currentTime = 0;
   }
 
-  // 3. タイマー・スコア・歌唱軌跡データを完全初期化
+  // 3. 進行時間・タイムスタンプの完全初期化（★ここが重要）
   isPlaying = false;
-  songTime = 0;
+  songTime = 0;          // 経過時間を0秒に巻き戻す
+  lastTimestamp = 0;     // gameLoop の deltaTime 急増を防止する
+
+  // 4. スコア・歌唱軌跡データを初期化
   userPitchBlocks = [];
   currentScore = 0;
   totalFramesEvaluated = 0;
@@ -1008,11 +1011,11 @@ window.retryGame = function() {
   techSlideUpCount = 0;
   techFallCount = 0;
 
-  // 4. UI（HUDとテクニック表示）のリセット
+  // 5. UI（HUDおよびテクニック表示）のリセット
   updateHUD(null, 0, 0, 'READY', 0);
   updateTechniquesUI();
 
-  // 5. 少しディレイを挟んで確実に最初からスタート
+  // 6. 状態変更を確実に反映させたあと最初からスタート
   setTimeout(() => {
     startSong();
   }, 100);
