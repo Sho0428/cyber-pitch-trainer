@@ -963,46 +963,57 @@ function retryGame() {
   }
 }
 
-// リトライボタン用グローバル関数の定義
+// リトライ処理（完全リセット＆最初から再スタート）
 window.retryGame = function() {
-  // 1. スコア表示モーダルを非表示にする
-  if (typeof closeScoreModal === 'function') {
-    closeScoreModal();
-  }
+  // 1. 進行中・再生中のフラグを即時停止
+  window.isPlaying = false;
 
-  // 2. 音声再生の停止と再生位置のリセット (先頭0秒に戻す)
+  // 2. 音声を先頭（0秒）に戻して一時停止
   if (window.audioElement) {
     window.audioElement.pause();
     window.audioElement.currentTime = 0;
   }
-
-  // Tone.js を使用している場合
+  
+  // Tone.js やその他のオーディオエンジンを使用している場合のリセット
   if (typeof Tone !== 'undefined' && Tone.Transport) {
     Tone.Transport.stop();
     Tone.Transport.seconds = 0;
   }
 
-  // 3. アニメーションフレームの停止
+  // 3. アニメーションフレームループの破棄
   if (window.animationFrameId) {
     cancelAnimationFrame(window.animationFrameId);
     window.animationFrameId = null;
   }
 
-  // 4. スコアやノート判定インデックスなどの状態初期化
+  // 4. スコア・判定・描画関連の変数を完全リセット
   window.currentScore = 0;
   window.currentNoteIndex = 0;
   window.userPitchHistory = [];
-  window.isPlaying = false;
+  if (typeof songProgress !== 'undefined') window.songProgress = 0;
 
-  // 5. キャンバスの描画をクリア
+  // 5. キャンバス（ピッチ軌跡）のクリア
   const canvas = document.getElementById('pitch-canvas');
   if (canvas) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
-  // 6. 最初から再スタート
-  if (typeof togglePlay === 'function') {
-    togglePlay();
+  // 6. スコア表示モーダルを閉じる
+  if (typeof closeScoreModal === 'function') {
+    closeScoreModal();
+  } else {
+    const scoreModal = document.getElementById('score-modal');
+    if (scoreModal) scoreModal.classList.add('hidden');
   }
+
+  // 7. 最初から再スタート（わずかに遅延を入れて状態反映を確実にする）
+  setTimeout(() => {
+    if (typeof togglePlay === 'function') {
+      // togglePlay が「停止中なら再生開始する」仕様の場合、確実にスタート
+      togglePlay();
+    } else if (typeof startGame === 'function') {
+      startGame();
+    }
+  }, 100);
 };
