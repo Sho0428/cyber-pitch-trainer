@@ -917,3 +917,48 @@ function showCustomToast(title, message) {
 function closeCustomToast() {
     document.getElementById('customToastModal').classList.add('hidden');
 }
+
+// リトライ処理（最初からやり直す）
+function retryGame() {
+  // 1. スコア表示モーダルを閉じる
+  if (typeof closeScoreModal === 'function') {
+    closeScoreModal();
+  }
+
+  // 2. 音声再生の停止と再生位置のリセット (先頭0秒に戻す)
+  if (window.audioElement) {
+    window.audioElement.pause();
+    window.audioElement.currentTime = 0;
+  }
+
+  // Tone.js を使用している場合
+  if (typeof Tone !== 'undefined' && Tone.Transport) {
+    Tone.Transport.stop();
+    Tone.Transport.seconds = 0;
+  }
+
+  // 3. アニメーションフレームの停止
+  if (window.animationFrameId) {
+    cancelAnimationFrame(window.animationFrameId);
+    window.animationFrameId = null;
+  }
+
+  // 4. スコアやノート位置などの状態初期化
+  window.currentScore = 0;
+  window.currentNoteIndex = 0;
+  window.userPitchHistory = [];
+  window.isPlaying = false;
+
+  // 5. キャンバスの描画クリア
+  const canvas = document.getElementById('pitch-canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // 6. 再生を最初から再開
+  // ※お使いのスタート関数の名前（togglePlay, startGame など）に合わせて呼び出してください
+  if (typeof togglePlay === 'function') {
+    togglePlay(); 
+  }
+}

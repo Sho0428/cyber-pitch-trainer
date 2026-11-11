@@ -369,7 +369,8 @@
             </div>
 
             <div class="flex justify-center space-x-3 mt-4">
-                <button onclick="closeScoreModal(); togglePlay();" class="px-5 py-2 bg-neonCyan text-slate-950 font-bold font-mono text-xs rounded hover:bg-cyan-300 transition">
+                <!-- onclick を retryGame() に変更 -->
+                <button onclick="retryGame()" class="px-5 py-2 bg-neonCyan text-slate-950 font-bold font-mono text-xs rounded hover:bg-cyan-300 transition">
                     <i class="fa-solid fa-rotate-right mr-1.5"></i>RETRY
                 </button>
                 <button onclick="closeScoreModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs rounded transition">
