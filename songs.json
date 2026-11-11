@@ -34,7 +34,7 @@
       { "midi": 62, "time": 2.118, "duration": 1.059 },
       { "midi": 64, "time": 3.176, "duration": 0.353 },
       { "midi": 62, "time": 3.529, "duration": 0.706 },
-      { "midi": 64, "time": 4.235, "duration": 0.706 },
+      { "midi": 64, "time": 4.235, "duration": 0.353 },
       { "midi": 64, "time": 4.941, "duration": 0.706 },
       { "midi": 65, "time": 5.647, "duration": 0.706 },
       { "midi": 67, "time": 6.353, "duration": 1.412 },
