@@ -80,6 +80,7 @@ async function loadSongsJson() {
         const response = await fetch('/songs.json');
         if (response.ok) {
             songs = await response.json();
+            populateSongSelect(); // まずドロップダウンを生成
             if (songs.length > 0) {
                 currentSong = songs[0];
             }
