@@ -13,6 +13,9 @@ import soundfile as sf
 import yt_dlp
 import imageio_ffmpeg
 
+# アプリのルートディレクトリ（絶対パス）を取得
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 app = FastAPI()
 
 app.add_middleware(
@@ -23,7 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-TEMP_DIR = "temp_audio"
+TEMP_DIR = os.path.join(BASE_DIR, "temp_audio")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 class UrlRequest(BaseModel):
@@ -141,16 +144,17 @@ def process_audio_file(file_path, manual_bpm=116.0):
 
 @app.get("/")
 def read_index():
-    return FileResponse("index.html")
+    index_path = os.path.join(BASE_DIR, "index.html")
+    return FileResponse(index_path)
 
-# ★ songs.json をフロントエンドに配信するルーティング
+# ★ songs.json を絶対パスで安全に配信するエンドポイント
 @app.get("/songs.json")
 def get_songs_json():
-    songs_path = "songs.json"
+    songs_path = os.path.join(BASE_DIR, "songs.json")
     if os.path.exists(songs_path):
         return FileResponse(songs_path)
     else:
-        raise HTTPException(status_code=404, detail="songs.json が見つかりません。ルートフォルダに作成してください。")
+        raise HTTPException(status_code=404, detail=f"songs.json not found at {songs_path}")
 
 @app.post("/api/upload-file")
 async def upload_file(file: UploadFile = File(...)):
@@ -223,7 +227,7 @@ def load_from_url(req: UrlRequest):
         raise HTTPException(status_code=400, detail=f"音源取得エラー: {str(e)}")
 
 app.mount("/temp_audio", StaticFiles(directory=TEMP_DIR), name="temp_audio")
-app.mount("/", StaticFiles(directory="."), name="static")
+app.mount("/", StaticFiles(directory=BASE_DIR), name="static")
 
 if __name__ == "__main__":
     import uvicorn
