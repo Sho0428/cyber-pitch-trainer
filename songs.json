@@ -67,10 +67,10 @@
       { "midi": 65, "time": 24.706, "duration": 0.353, "note_name": "ファ" },
       { "midi": 64, "time": 25.059, "duration": 0.706, "note_name": "ミ" },
 
-      { "midi": 27.176, "time": 27.176, "duration": 0.706, "note_name": "ソ" },
+      { "midi": 67, "time": 27.176, "duration": 0.706, "note_name": "ソ" },
       { "midi": 67, "time": 27.882, "duration": 0.706, "note_name": "ソ" },
       { "midi": 67, "time": 28.588, "duration": 0.706, "note_name": "ソ" },
-      { "midi": 72, "time": 29.294, "duration": 1.059, "note_name": "ドー.(高)" },
+      { "midi": 60, "time": 29.294, "duration": 1.059, "note_name": "ドー." },
       { "midi": 62, "time": 30.353, "duration": 0.353, "note_name": "レ" },
       { "midi": 64, "time": 30.706, "duration": 0.706, "note_name": "ミ" },
       { "midi": 65, "time": 31.412, "duration": 0.706, "note_name": "ファ" },
