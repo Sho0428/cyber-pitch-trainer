@@ -82,12 +82,12 @@
   },
 
   {
-  "id": "shining-star-full",
-  "title": "Shining Star",
-  "artist": "魔王魂",
-  "bpm": 120,
-  "audio_url": null,
-  "notes": [
+    "id": "shining-star-full",
+    "title": "Shining Star",
+    "artist": "魔王魂",
+    "bpm": 120,
+    "audio_url": null,
+    "notes": [
     {"midi": 61, "time": 747.0, "duration": 368.0, "note_name": "ド#ー"},
     {"midi": 49, "time": 747.0, "duration": 368.0, "note_name": "ド#ー"},
     {"midi": 56, "time": 936.0, "duration": 357.0, "note_name": "ソ#ー"},
@@ -3411,6 +3411,6 @@
     {"midi": 68, "time": 262948.0, "duration": 324.0, "note_name": "ソ#ー"},
     {"midi": 49, "time": 263149.0, "duration": 79.0, "note_name": "ド#ー"},
     {"midi": 68, "time": 263518.0, "duration": 67.0, "note_name": "ソ#ー"}
-  ]
-}
+    ]
+  }
 ]
