@@ -45,7 +45,7 @@ let currentWaveform = 'piano';
 
 let pianoInstrument = null;
 let lastPlayedNoteId = null;
-let activePianoNode = null;
+let activePianoNodes = [];
 
 let currentSungFreq = 0;
 let currentSungMidi = null;
@@ -140,7 +140,7 @@ function toggleGuideSound() {
     const icon = document.getElementById('guideIcon');
     const txt = document.getElementById('guideText');
     if (guideSoundEnabled) {
-        initAudio(); // ★オンにした時点でピアノ音源のロードも開始
+        initAudio();
         if (icon) icon.className = 'fa-solid fa-volume-high text-neonCyan';
         if (txt) {
             txt.innerText = 'GUIDE';
@@ -153,11 +153,7 @@ function toggleGuideSound() {
             txt.className = 'text-slate-400';
         }
         if (guideGain) guideGain.gain.value = 0;
-        // ★追加：ピアノ音を停止
-        if (activePianoNode) {
-            try { activePianoNode.stop(); } catch (e) {}
-            activePianoNode = null;
-        }
+        stopWebAudioPiano(0.05);
         lastPlayedNoteId = null;
     }
 }
@@ -167,12 +163,8 @@ function changeWaveform(wave) {
     if (wave !== 'piano' && synthOsc) {
         synthOsc.type = wave;
     }
-    // ★追加：切り替え時に鳴っている音をリセット
     if (guideGain && audioCtx) guideGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.015);
-    if (activePianoNode) {
-        try { activePianoNode.stop(); } catch (e) {}
-        activePianoNode = null;
-    }
+    stopWebAudioPiano(0.05);
     lastPlayedNoteId = null;
 }
 
@@ -180,6 +172,58 @@ function updateNoiseGate(val) {
     noiseGateThreshold = parseFloat(val);
     const gateVal = document.getElementById('noiseGateVal');
     if (gateVal) gateVal.innerText = val;
+}
+
+function stopWebAudioPiano(fadeTime = 0.08) {
+    if (!audioCtx || activePianoNodes.length === 0) return;
+    const now = audioCtx.currentTime;
+    activePianoNodes.forEach(({ osc, gain }) => {
+        try {
+            gain.gain.cancelScheduledValues(now);
+            gain.gain.setValueAtTime(gain.gain.value, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + fadeTime);
+            osc.stop(now + fadeTime + 0.02);
+        } catch (e) {}
+    });
+    activePianoNodes = [];
+}
+
+function playWebAudioPiano(midiNote, duration) {
+    if (!audioCtx) return;
+    stopWebAudioPiano(0.05);
+
+    const now = audioCtx.currentTime;
+    const freq = midiToFreq(midiNote);
+    const noteDur = Math.max(0.15, duration);
+
+    // ピアノ特有の倍音構成（基音 + 2倍音 + 3倍音 + 打弦アタック音）
+    const partials = [
+        { ratio: 1, type: 'triangle', amp: 0.32, decay: noteDur + 0.6 },
+        { ratio: 2, type: 'sine',     amp: 0.14, decay: noteDur * 0.7 + 0.3 },
+        { ratio: 3, type: 'sine',     amp: 0.06, decay: noteDur * 0.4 + 0.15 },
+        { ratio: 4, type: 'sine',     amp: 0.025, decay: 0.12 } // ハンマー打鍵の輪郭
+    ];
+
+    partials.forEach(p => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = p.type;
+        osc.frequency.setValueAtTime(freq * p.ratio, now);
+
+        // ピアノ特有の急速アタック＆指数減衰エンベロープ
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(p.amp, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + p.decay);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now);
+        osc.stop(now + p.decay + 0.05);
+
+        activePianoNodes.push({ osc, gain });
+    });
 }
 
 /* Audio & Microphone Engine */
@@ -444,6 +488,8 @@ function pauseSong() {
     if (playIcon) playIcon.className = 'fa-solid fa-play';
     if (playText) playText.innerText = 'RESUME';
     if (guideGain) guideGain.gain.value = 0;
+    stopWebAudioPiano(0.05);
+    lastPlayedNoteId = null;
 }
 
 function stopSong() {
@@ -469,6 +515,8 @@ function stopSong() {
     if (playIcon) playIcon.className = 'fa-solid fa-play';
     if (playText) playText.innerText = 'START';
     if (guideGain) guideGain.gain.value = 0;
+    stopWebAudioPiano(0.05);
+    lastPlayedNoteId = null;
 
     updateHUD(null, 0, 0, 'READY', 0);
     updateTechniquesUI();
@@ -553,24 +601,16 @@ function evaluatePerformance() {
         const noteUniqueId = `${activeNote.time}_${targetMidi}`;
 
         if (guideSoundEnabled) {
-            if (currentWaveform === 'piano' && pianoInstrument) {
-                // 電子音オシレーターはミュート
-                if (guideGain) guideGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.015);
+            if (currentWaveform === 'piano') {
+                if (guideGain && audioCtx) guideGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.015);
 
-                // 新しい音符に入った瞬間だけピアノを打鍵する
+                // 新しい音符に入った瞬間にピアノを打鍵
                 if (lastPlayedNoteId !== noteUniqueId) {
-                    if (activePianoNode) {
-                        try { activePianoNode.stop(); } catch (e) {}
-                    }
-                    const remainDur = Math.max(0.1, (activeNote.time + activeNote.duration) - songTime);
-                    activePianoNode = pianoInstrument.play(targetMidi, audioCtx.currentTime, {
-                        duration: remainDur,
-                        gain: 2.0
-                    });
+                    const remainDur = Math.max(0.15, (activeNote.time + activeNote.duration) - songTime);
+                    playWebAudioPiano(targetMidi, remainDur);
                     lastPlayedNoteId = noteUniqueId;
                 }
             } else if (guideGain && synthOsc) {
-                // 従来の電子音モード
                 synthOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.015);
                 guideGain.gain.setTargetAtTime(0.18, audioCtx.currentTime, 0.015);
             }
@@ -602,10 +642,7 @@ function evaluatePerformance() {
         // 休符（音符がない区間）
         if (guideGain && audioCtx) guideGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.015);
         if (lastPlayedNoteId !== null) {
-            if (activePianoNode) {
-                try { activePianoNode.stop(audioCtx.currentTime + 0.08); } catch (e) {}
-                activePianoNode = null;
-            }
+            stopWebAudioPiano(0.08);
             lastPlayedNoteId = null;
         }
         updateHUD(null, 0, currentSungFreq, 'READY', 0);
