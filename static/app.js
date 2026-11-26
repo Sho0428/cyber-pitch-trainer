@@ -418,8 +418,11 @@ function togglePlay() {
     }
 }
 
-function startSong() {
-    initAudio();
+async function startSong() {
+    await initAudio();
+    if (audioCtx && audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+    }
     isPlaying = true;
     if (currentSong && currentSong.audio_url) {
         audioPlayer.play();
