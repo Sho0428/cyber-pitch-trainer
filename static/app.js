@@ -189,7 +189,9 @@ function stopWebAudioPiano(fadeTime = 0.08) {
 }
 
 function playWebAudioPiano(midiNote, duration) {
-    if (!audioCtx) return;
+    if (!audioCtx) return;if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
     stopWebAudioPiano(0.05);
 
     const now = audioCtx.currentTime;
@@ -467,6 +469,10 @@ async function startSong() {
     if (audioCtx && audioCtx.state === 'suspended') {
         await audioCtx.resume();
     }
+    if (!isMicActive) {
+        await toggleMicrophone();
+    }
+    lastPlayedNoteId = null;
     isPlaying = true;
     if (currentSong && currentSong.audio_url) {
         audioPlayer.play();
@@ -475,7 +481,6 @@ async function startSong() {
     const playText = document.getElementById('playText');
     if (playIcon) playIcon.className = 'fa-solid fa-pause';
     if (playText) playText.innerText = 'PAUSE';
-    if (!isMicActive) toggleMicrophone();
 }
 
 function pauseSong() {
